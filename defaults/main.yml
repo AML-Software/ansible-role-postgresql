@@ -157,6 +157,7 @@ postgresql_ssl_cert_file: "/etc/ssl/certs/ssl-cert-snakeoil.pem"    # (>= 9.2)
 postgresql_ssl_key_file: "/etc/ssl/private/ssl-cert-snakeoil.key"   # (>= 9.2)
 postgresql_ssl_ca_file: ""                                          # (>= 9.2)
 postgresql_ssl_crl_file: ""                                         # (>= 9.2)
+postgresql_ssl_crl_dir: ""                                          # (>= 15)
 postgresql_password_encryption: "{{ 'md5' if postgresql_version is version_compare('10', '>=') else 'on' }}" # (>=10.0 set to scram-sha-256 for best security)
 postgresql_db_user_namespace: off
 postgresql_row_security: off                                        # (>= 9.5)
@@ -171,6 +172,7 @@ postgresql_tcp_keepalives_idle: 0
 postgresql_tcp_keepalives_interval: 0
 postgresql_tcp_keepalives_count: 0
 postgresql_tcp_user_timeout: 0                                      # (>= 12)
+postgresql_client_connection_check_interval: 0                      # (>= 15)
 
 
 #------------------------------------------------------------------------------
@@ -181,6 +183,7 @@ postgresql_tcp_user_timeout: 0                                      # (>= 12)
 
 postgresql_shared_buffers:       128MB # min 128kB
 postgresql_huge_pages:           "try"   # on, off, or try
+postgresql_huge_page_size:        0 # (>= 15)
 postgresql_temp_buffers:         8MB   # min 800kB
 
 # Caution: it is not advisable to set max_prepared_transactions nonzero unless
@@ -203,7 +206,7 @@ postgresql_dynamic_shared_memory_type: "posix"  # the default is the first optio
                                                 #   windows
                                                 #   mmap
                                                 # use none to disable dynamic shared memory
-
+postgresql_min_dynamic_shared_memory: 0MB  # (>= 15)
 
 # - Disk -
 
@@ -306,6 +309,7 @@ postgresql_checkpoint_warning:           30s   # 0 disables
 
 # allows archiving to be done
 postgresql_archive_mode: "off"
+postgresql_archive_library: ""  # (>= 15)
 
 # Command to use to archive a logfile segment.
 # Placeholders: %p = path of file to archive
@@ -315,6 +319,10 @@ postgresql_archive_command: ""
 
 # force a logfile segment switch after this
 postgresql_archive_timeout: 0
+
+# - Prefetching during recovery -
+postgresql_recovery_prefetch: "try" # (>= 15)
+postgresql_wal_decode_buffer_size: 512kB # (>= 15)
 
 # - Archive Recovery -
 
@@ -404,12 +412,15 @@ postgresql_max_sync_workers_per_subscription: 2 # (>= 10) taken from max_logical
 
 # - Planner Method Configuration -
 
+postgresql_enable_async_append:            on   # (>= 15)
 postgresql_enable_bitmapscan:              on
+postgresql_enable_gathermerge:             on   # (>= 15)
 postgresql_enable_hashagg:                 on
 postgresql_enable_hashjoin:                on
 postgresql_enable_indexscan:               on
 postgresql_enable_indexonlyscan:           on
 postgresql_enable_material:                on
+postgresql_enable_memoize:                 on   # (>= 15)
 postgresql_enable_mergejoin:               on
 postgresql_enable_nestloop:                on
 postgresql_enable_parallel_append:         on    # (>= 11)
@@ -463,6 +474,7 @@ postgresql_join_collapse_limit:        8            # 1 disables collapsing of e
 postgresql_force_parallel_mode:        off          # on, off, regress (>= 9.6)
 postgresql_jit:                        on           # (>= 11: off, 12: on)
 postgresql_plan_cache_mode:            "auto"       # (>= 12)
+postgresql_recursive_worktable_factor: "10.0"       # range 0.001-1000000 (>= 15)
 
 
 #------------------------------------------------------------------------------
@@ -555,6 +567,7 @@ postgresql_log_min_duration_statement: -1
 postgresql_log_min_duration_sample:    -1       # (>= 13)
 postgresql_log_statement_sample_rate:   1.0     # (>= 13)
 postgresql_log_transaction_sample_rate: 0.0     # (>= 12)
+postgresql_log_startup_progress_interval: 10s   # (>= 15)
 
 
 # - What to Log -
@@ -594,6 +607,7 @@ postgresql_log_line_prefix: "%t "
 
 # log lock waits >= deadlock_timeout
 postgresql_log_lock_waits: off
+postgresql_log_recovery_conflict_waits: off
 postgresql_log_parameter_max_length: -1          # (>= 13)
 postgresql_log_parameter_max_length_on_error: 0  # (>= 13)
 postgresql_log_statement:  "none"  # none, ddl, mod, all
@@ -613,14 +627,17 @@ postgresql_log_timezone:   "UTC"
 postgresql_track_activities:          on
 postgresql_track_counts:              on
 postgresql_track_io_timing:           off   # (>= 9.2)
+postgresql_track_wal_io_timing:       off   # (>= 15)
 postgresql_track_functions:           "none" # none, pl, all
 postgresql_track_activity_query_size: 1024
+postgresql_stats_fetch_consistency: cache # (>= 15)
 postgresql_update_process_title:      on
 postgresql_stats_temp_directory:      "pg_stat_tmp"
 
 
 # - Statistics Monitoring -
 
+postgresql_compute_query_id: auto # (>= 15)
 postgresql_log_parser_stats:    off
 postgresql_log_planner_stats:   off
 postgresql_log_executor_stats:  off
@@ -670,6 +687,7 @@ postgresql_search_path: # schema names
   - '"$user"'
   - "public"
 postgresql_default_tablespace: "" # a tablespace name, "" uses the default
+postgresql_default_toast_compression: "pglz" # 'pglz' or 'lz4' (>= 15)
 postgresql_temp_tablespaces: [] # a list of tablespace names
 postgresql_default_table_access_method: "heap"
 
@@ -682,11 +700,14 @@ postgresql_session_replication_role:       "origin"
 postgresql_statement_timeout:                     0           # in milliseconds, 0 is disabled
 postgresql_lock_timeout:                          0           # in milliseconds, 0 is disabled (>= 9.3)
 postgresql_idle_in_transaction_session_timeout:   0           # in milliseconds, 0 is disabled (>= 9.6)
+postgresql_idle_session_timeout:   0                          # in milliseconds, 0 is disabled (>= 15)
 postgresql_vacuum_freeze_min_age:                 50000000
 postgresql_vacuum_freeze_table_age:               150000000
+postgresql_vacuum_failsafe_age:                   1600000000 # (>= 15)
 postgresql_vacuum_cleanup_index_scale_factor:     0.1         # (>= 11)
 postgresql_vacuum_multixact_freeze_min_age:       5000000     # (>= 9.3)
 postgresql_vacuum_multixact_freeze_table_age:     150000000   # (>= 9.3)
+postgresql_vacuum_multixact_failsafe_age:         1600000000  # (>= 15)
 
 postgresql_bytea_output: "hex"  # hex, escape
 postgresql_xmlbinary:    "base64"
@@ -784,6 +805,7 @@ postgresql_exit_on_error: off
 postgresql_restart_after_crash: on
 # Retry or panic on failure to fsync data?
 postgresql_data_sync_retry: off
+postgresql_recovery_init_sync_method: "fsync" # fsync, syncfs (Linux 5.8+) (>= 15)
 
 
 #------------------------------------------------------------------------------
